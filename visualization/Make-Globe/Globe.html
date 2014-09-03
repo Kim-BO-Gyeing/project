@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>GLOBE</title>
+
+<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+<script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script src="async.js"></script>
+<script src="queue.js"></script>
+<script src="http://d3js.org/queue.v1.min.js"></script>
+<script src="http://d3js.org/topojson.v1.min.js"></script>
+
+<style>
+.country {
+stroke: #666;
+stroke-width: 1px;
+transition: all 0.5s;
+&:hover {
+fill: #777;
+}
+}
+
+
+
+
+.point {
+stroke: #600;
+stroke-width: 0px;
+transistion: all 0.5s;
+fill: #444;
+
+}
+</style>
+
+
+
+</head>
+<body>
+<script type="text/javascript">
+
+var svg = d3.select("body")
+	.insert("svg", ":first-child")
+	.attr("width", 600)
+	.attr("height", 600)
+	.on("mousedown",mouseDown)
+	.on("mousemove",mouseMove)
+	.on("mouseup",mouseUp);
+
+
+var projection = d3.geo.orthographic().scale(300).translate([300, 300]).rotate([0,-10,0]).clipAngle(90);
+
+var path = d3.geo.path().projection(projection);
+var currentLevel = 1;
+var groupPathsSelection = {} ;
+svg.append("path").datum({type: "Sphere"}).attr("class", "sphere").attr("d", path).style({'fill': '#000000', 'fill-opacity': 0.05})
+.style({'stroke-width': 1, 'stroke': '#000000', 'stroke-linejoin': 'round'});
+
+var groupPaths = svg.append("g").attr("class","all-path");
+
+//var locations = svg.append("p").attr("class","all-point");
+var graticules = d3.geo.graticule();
+
+
+groupPaths.append("path").datum(graticules).attr("class", "graticule").attr("d", path).style({'fill': '#000000' ,'fill-opacity': 0})
+.style({'stroke-width': 1, 'stroke': '#bbbbbb', 'stroke-linejoin': 'round'});
+
+
+
+d3.json("data/world_110m_admin_countries-capitals_simplified.json", function(error, worldTopo)
+{
+	for(var i = 0; i < worldTopo.length; i++)
+	{
+	var  countries;
+	countries = topojson.feature(worldTopo[i], worldTopo[i].objects.countries).features ;
+
+	groupPaths.selectAll(".country").data(countries).enter().append("path").attr("d", path).attr("class", "country");
+//	console.log(countries);		
+}
+}
+)
+
+
+var animationRequest,manualRotationActivated;
+var m0, o0 = null
+var currentRotation = [0, -10 ,0];
+
+function redrawPathsOnRotationOrScale (rotation, scale) {
+  
+ currentRotation = rotation;
+  projection.rotate(currentRotation).scale(scale);
+  groupPathsSelection["path"] = groupPaths.selectAll("path");
+  groupPathsSelection["path"].attr("d", path);
+  groupPaths.selectAll("circle").attr("cx", function(d){  return projection(d.coordinates)[1];} )
+                .attr("cy", function(d){ return projection(d.coordinates)[0] ;} ) 
+                .attr("r",3)
+                .style("fill","red")
+                .attr("class", "point");
+
+}
+
+function mouseMove() {
+  var m1, o1;
+  if (m0 && currentLevel === 1) {
+    m1 = [d3.event.pageX, d3.event.pageY];
+    o1 = [o0[0] + (m1[0] - m0[0]) / 6, o0[1] + (m0[1] - m1[1]) / 6];
+    o1[1] = (o1[1] > 30 ? 30 : (o1[1] < -30 ? -30 : o1[1]));
+    currentRotation[0] = o1[0];
+ }
+}
+function rotate() {
+   if (manualRotationActivated) {
+    projection.rotate(currentRotation);
+    redrawPathsOnRotationOrScale(currentRotation, projection.scale());
+    animationRequest = requestAnimationFrame(rotate);
+  }
+}
+
+function  mouseDown() { 
+
+  m0 = [d3.event.pageX, d3.event.pageY];
+  o0 = projection.rotate();
+  manualRotationActivated = true;
+  animationRequest = requestAnimationFrame(rotate);
+  return d3.event.preventDefault();
+}
+
+function mouseUp() {
+  manualRotationActivated = false;
+  if (m0) {
+    return m0 = null;
+  }
+}
+
+//var points;
+
+//points = svg.append("circle").attr("class", "circle");
+
+
+
+   
+d3.json("data/Test.json", function(error, data)
+{
+	
+console.log(error);
+	
+
+  //for(var i = 0; i < 100; i++)
+  // {
+
+      var points = data;
+    var pos; 	
+	groupPaths		
+	.selectAll(".point")
+	.data(points) 
+	.enter()
+	.append("path")
+	.attr("d",path)
+	.style("fill","red")
+	.attr("class", "point");
+
+//	.attr("cx", function(d){  return projection(d.coordinates)[0];} )
+ 	//	.attr("cy", function(d){  return projection(d.coordinates)[1] ;} ) 
+	
+//}
+} 
+);  
+</script>
+
+
+</body>
+</html>
